@@ -36,20 +36,16 @@ def deploy_file(bucket, src, dst, headers={}, public=True):
         file_headers['Content-Type'] = mimetypes.guess_type(src)[0]
 
     # Define policy
-    if public:
-        policy = 'public-read'
-    else:
-        policy = 'private'
-
+    policy = 'public-read' if public else 'private'
     with open(src, 'rb') as f:
         local_md5 = hashlib.md5()
         local_md5.update(f.read())
         local_md5 = local_md5.hexdigest()
 
     if local_md5 == s3_md5:
-        logger.info('Skipping %s (has not changed)' % src)
+        logger.info(f'Skipping {src} (has not changed)')
     else:
-        logger.info('Uploading %s --> %s' % (src, dst))
+        logger.info(f'Uploading {src} --> {dst}')
         k.set_contents_from_filename(src, file_headers, policy=policy)
 
 
@@ -68,13 +64,7 @@ def deploy_folder(bucket_name, src, dst, headers={}, ignore=[]):
 
             src_path = os.path.join(local_path, name)
 
-            skip = False
-
-            for pattern in ignore:
-                if fnmatch(src_path, pattern):
-                    skip = True
-                    break
-
+            skip = any(fnmatch(src_path, pattern) for pattern in ignore)
             if skip:
                 continue
 
@@ -85,10 +75,7 @@ def deploy_folder(bucket_name, src, dst, headers={}, ignore=[]):
 
             to_deploy.append((src_path, dst_path))
 
-    if bucket_name == app_config.STAGING_S3_BUCKET:
-        public = False
-    else:
-        public = True
+    public = bucket_name != app_config.STAGING_S3_BUCKET
     bucket = utils.get_bucket(bucket_name)
     logger.info(dst)
     for src, dst in to_deploy:
@@ -101,7 +88,7 @@ def delete_folder(bucket_name, dst):
     """
     bucket = utils.get_bucket(bucket_name)
 
-    for key in bucket.list(prefix='%s/' % dst):
-        logger.info('Deleting %s' % (key.key))
+    for key in bucket.list(prefix=f'{dst}/'):
+        logger.info(f'Deleting {key.key}')
 
         key.delete()

@@ -117,7 +117,8 @@ def app(port='8000'):
     Serve app.py.
     """
 
-    gunicorn = 'gunicorn -b 0.0.0.0:%s --timeout 3600 --reload --log-file=logs/app.log app:wsgi_app' % port
+    gunicorn = f'gunicorn -b 0.0.0.0:{port} --timeout 3600 --reload --log-file=logs/app.log app:wsgi_app'
+
 
     if env.get('settings'):
         local("DEPLOYMENT_TARGET=%s bash -c 'gunicorn -b 0.0.0.0:%s --timeout 3600 --reload --log-file=logs/app.log app:wsgi_app'" % (env.settings, port))
@@ -199,23 +200,19 @@ def deploy(remote='origin', reload=False):
     flat.deploy_folder(
         app_config.S3_BUCKET,
         'www',
-        '%s%s' % (app_config.LIVEBLOG_DIRECTORY_PREFIX,
-                  app_config.CURRENT_LIVEBLOG),
-        headers={
-            'Cache-Control': 'max-age=%i' % app_config.DEFAULT_MAX_AGE
-        },
-        ignore=['www/assets/*', 'www/live-data/*']
+        f'{app_config.LIVEBLOG_DIRECTORY_PREFIX}{app_config.CURRENT_LIVEBLOG}',
+        headers={'Cache-Control': 'max-age=%i' % app_config.DEFAULT_MAX_AGE},
+        ignore=['www/assets/*', 'www/live-data/*'],
     )
+
 
     flat.deploy_folder(
         app_config.S3_BUCKET,
         'www/assets',
-        '%s%s/assets' % (app_config.LIVEBLOG_DIRECTORY_PREFIX,
-                         app_config.CURRENT_LIVEBLOG),
-        headers={
-            'Cache-Control': 'max-age=%i' % app_config.ASSETS_MAX_AGE
-        }
+        f'{app_config.LIVEBLOG_DIRECTORY_PREFIX}{app_config.CURRENT_LIVEBLOG}/assets',
+        headers={'Cache-Control': 'max-age=%i' % app_config.ASSETS_MAX_AGE},
     )
+
 
     # DEPLOY STATIC LIVEBLOG FROM LOCAL ENVIRONMENT
     if app_config.DEPLOY_STATIC_LIVEBLOG:
@@ -239,12 +236,10 @@ def deploy_liveblog():
     flat.deploy_folder(
         app_config.S3_BUCKET,
         '.liveblog',
-        '%s%s' % (app_config.LIVEBLOG_DIRECTORY_PREFIX,
-                  app_config.CURRENT_LIVEBLOG),
-        headers={
-            'Cache-Control': 'max-age=%i' % app_config.DEFAULT_MAX_AGE
-        }
+        f'{app_config.LIVEBLOG_DIRECTORY_PREFIX}{app_config.CURRENT_LIVEBLOG}',
+        headers={'Cache-Control': 'max-age=%i' % app_config.DEFAULT_MAX_AGE},
     )
+
 
     # TODO turn backup on inauguration day
     if app_config.DEPLOYMENT_TARGET == 'production':
@@ -261,11 +256,8 @@ def deploy_liveblog_backup():
     flat.deploy_folder(
         app_config.ARCHIVE_S3_BUCKET,
         '.liveblog',
-        'liveblogs/%s/%s-%s' % (app_config.CURRENT_LIVEBLOG,
-                                now, app_config.PROJECT_SLUG),
-        headers={
-            'Cache-Control': 'max-age=%i' % app_config.DEFAULT_MAX_AGE
-        }
+        f'liveblogs/{app_config.CURRENT_LIVEBLOG}/{now}-{app_config.PROJECT_SLUG}',
+        headers={'Cache-Control': 'max-age=%i' % app_config.DEFAULT_MAX_AGE},
     )
 
 
@@ -313,13 +305,9 @@ def check_timestamp():
 
     bucket = utils.get_bucket(app_config.S3_BUCKET)
     k = Key(bucket)
-    k.key = '%s%s/live-data/timestamp.json' % (
-        app_config.LIVEBLOG_DIRECTORY_PREFIX,
-        app_config.CURRENT_LIVEBLOG)
-    if k.exists():
-        return True
-    else:
-        return False
+    k.key = f'{app_config.LIVEBLOG_DIRECTORY_PREFIX}{app_config.CURRENT_LIVEBLOG}/live-data/timestamp.json'
+
+    return bool(k.exists())
 
 
 @task
@@ -332,21 +320,16 @@ def reset_browsers():
     if not os.path.exists('www/live-data'):
         os.makedirs('www/live-data')
 
-    payload = {}
     now = datetime.now().strftime('%s')
-    payload['timestamp'] = now
-
+    payload = {'timestamp': now}
     with open('www/live-data/timestamp.json', 'w') as f:
         json.dump(payload, f)
 
     flat.deploy_folder(
         app_config.S3_BUCKET,
         'www/live-data',
-        '%s%s/live-data' % (app_config.LIVEBLOG_DIRECTORY_PREFIX,
-                            app_config.CURRENT_LIVEBLOG),
-        headers={
-            'Cache-Control': 'max-age=%i' % app_config.DEFAULT_MAX_AGE
-        }
+        f'{app_config.LIVEBLOG_DIRECTORY_PREFIX}{app_config.CURRENT_LIVEBLOG}/live-data',
+        headers={'Cache-Control': 'max-age=%i' % app_config.DEFAULT_MAX_AGE},
     )
 
 """
@@ -369,8 +352,8 @@ def shiva_the_destroyer():
     )
 
     with settings(warn_only=True):
-        current_folder = '%s%s' % (app_config.LIVEBLOG_DIRECTORY_PREFIX,
-                                   app_config.CURRENT_LIVEBLOG)
+        current_folder = f'{app_config.LIVEBLOG_DIRECTORY_PREFIX}{app_config.CURRENT_LIVEBLOG}'
+
         flat.delete_folder(app_config.S3_BUCKET, current_folder)
 
         if app_config.DEPLOY_TO_SERVERS:

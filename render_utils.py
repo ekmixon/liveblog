@@ -25,12 +25,11 @@ class BetterJSONEncoder(json.JSONEncoder):
     A JSON encoder that intelligently handles datetimes.
     """
     def default(self, obj):
-        if isinstance(obj, datetime):
-            encoded_object = obj.isoformat()
-        else:
-            encoded_object = json.JSONEncoder.default(self, obj)
-
-        return encoded_object
+        return (
+            obj.isoformat()
+            if isinstance(obj, datetime)
+            else json.JSONEncoder.default(self, obj)
+        )
 
 class Includer(object):
     """
@@ -59,7 +58,7 @@ class Includer(object):
         depth = len(request.path.split('/')) - (2 + self.asset_depth)
 
         while depth > 0:
-            relative_path = '../%s' % relative_path
+            relative_path = f'../{relative_path}'
             depth -= 1
 
         return relative_path
@@ -72,10 +71,10 @@ class Includer(object):
                 # Add a querystring to the rendered filename to prevent caching
                 timestamp_path = '%s?%i' % (path, int(time.time()))
 
-                out_path = 'www/%s' % path
+                out_path = f'www/{path}'
 
                 if path not in g.compiled_includes:
-                    logger.info('Rendering %s' % out_path)
+                    logger.info(f'Rendering {out_path}')
 
                     with codecs.open(out_path, 'w', encoding='utf-8') as f:
                         f.write(self._compress())
@@ -111,10 +110,10 @@ class JavascriptIncluder(Includer):
         src_paths = []
 
         for src in self.includes:
-            src_paths.append('www/%s' % src)
+            src_paths.append(f'www/{src}')
 
-            with codecs.open('www/%s' % src, encoding='utf-8') as f:
-                logger.info('- compressing %s' % src)
+            with codecs.open(f'www/{src}', encoding='utf-8') as f:
+                logger.info(f'- compressing {src}')
                 output.append(minify(f.read()))
 
         context = make_context()
@@ -141,7 +140,7 @@ class CSSIncluder(Includer):
 
         for src in self.includes:
 
-            src_paths.append('%s' % src)
+            src_paths.append(f'{src}')
 
             try:
                 compressed_src = subprocess.check_output(["node_modules/less/bin/lessc", "-x", src])
@@ -164,14 +163,7 @@ def flatten_app_config():
     Returns a copy of app_config containing only
     configuration variables.
     """
-    config = {}
-
-    # Only all-caps [constant] vars get included
-    for k, v in app_config.__dict__.items():
-        if k.upper() == k:
-            config[k] = v
-
-    return config
+    return {k: v for k, v in app_config.__dict__.items() if k.upper() == k}
 
 def make_context(asset_depth=0):
     """
@@ -229,7 +221,7 @@ def smarty_filter(s):
     try:
         return Markup(s)
     except:
-        logger.error('This string failed to encode: %s' % s)
+        logger.error(f'This string failed to encode: {s}')
         return Markup(s)
 
 class GetFirstElement(HTMLParser):
@@ -271,17 +263,18 @@ class GetFirstElement(HTMLParser):
         than the elements that are standalone.
         '''
         classes = dict(attrs).get('class', '').split(' ')
-        if tag == self.el and \
-                not any([c in self.without_classes for c in classes]) and \
-                all([c in classes for c in self.with_classes]) and \
-                not self.match_start:
-            logger.debug('Found a matching start tag: %s' % tag)
+        if (
+            tag == self.el
+            and all(c not in self.without_classes for c in classes)
+            and all(c in classes for c in self.with_classes)
+            and not self.match_start
+        ):
+            logger.debug(f'Found a matching start tag: {tag}')
             self.match_start = True
             self.matched_el = tag
             self.attrs = attrs
-        else:
-            if self.match_start and not self.match_end:
-                self.depth += 1
+        elif self.match_start and not self.match_end:
+            self.depth += 1
 
     def handle_endtag(self, tag):
         if self.match_start and not self.match_end:

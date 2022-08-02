@@ -42,11 +42,7 @@ def is_post_marker(tag):
     Checks for the beginning of a new post
     """
     text = tag.get_text()
-    m = new_post_marker_regex.match(text)
-    if m:
-        return True
-    else:
-        return False
+    return bool(m := new_post_marker_regex.match(text))
 
 
 def is_post_end_marker(tag):
@@ -54,11 +50,7 @@ def is_post_end_marker(tag):
     Checks for the beginning of a new post
     """
     text = tag.get_text()
-    m = post_end_marker_regex.match(text)
-    if m:
-        return True
-    else:
-        return False
+    return bool(m := post_end_marker_regex.match(text))
 
 
 def find_pinned_post(posts):
@@ -109,12 +101,6 @@ def insert_sponsorship(ordered_posts):
     if app_config.SPONSORSHIP_POSITION == -1:
         return ordered_posts
 
-    SPONSORSHIP = {
-        'slug': 'sponsorship',
-        'published': 'yes',
-        'contents': 'This is the sponsorship post.'
-    }
-
     published_count = 0
     insert = False
     for idx, post in enumerate(ordered_posts):
@@ -125,9 +111,15 @@ def insert_sponsorship(ordered_posts):
                 insert = True
                 break
         except KeyError:
-            logger.warning("Post does not have published metadata %s" % post)
+            logger.warning(f"Post does not have published metadata {post}")
             continue
     if insert:
+        SPONSORSHIP = {
+            'slug': 'sponsorship',
+            'published': 'yes',
+            'contents': 'This is the sponsorship post.'
+        }
+
         ordered_posts.insert(idx + 1, SPONSORSHIP)
 
     return ordered_posts
@@ -150,32 +142,29 @@ def compose_pinned_post(post):
         logger.error("First post should always be the pinned post")
 
     # Cache pinned post contents
-    if post['published mode'] != 'yes':
-        result = collection.find_one({'_id': post['slug']})
-        if not result:
-            logger.debug('did not find pinned post %s' % post['slug'])
-            collection.insert({
-                '_id': post['slug'],
-                'cached_contents': post['contents'],
-                'cached_headline': post['headline'],
-            })
-            post['cached_contents'] = post['contents']
-            post['cached_headline'] = post['headline']
-        else:
-            logger.debug('found pinned post %s' % post['slug'])
-            post['cached_contents'] = result['cached_contents']
-            post['cached_headline'] = result['cached_headline']
-            logger.debug('returning cached headline %s' % (
-                         post['cached_headline']))
-    else:
+    if post['published mode'] == 'yes':
         # Update mongodb cache
         post['cached_contents'] = post['contents']
         post['cached_headline'] = post['headline']
-        logger.debug("update cached headline to %s" % post['headline'])
+        logger.debug(f"update cached headline to {post['headline']}")
         collection.update({'_id': post['slug']},
                           {'cached_contents': post['contents'],
                            'cached_headline': post['headline']})
 
+    elif result := collection.find_one({'_id': post['slug']}):
+        logger.debug(f"found pinned post {post['slug']}")
+        post['cached_contents'] = result['cached_contents']
+        post['cached_headline'] = result['cached_headline']
+        logger.debug(f"returning cached headline {post['cached_headline']}")
+    else:
+        logger.debug(f"did not find pinned post {post['slug']}")
+        collection.insert({
+            '_id': post['slug'],
+            'cached_contents': post['contents'],
+            'cached_headline': post['headline'],
+        })
+        post['cached_contents'] = post['contents']
+        post['cached_headline'] = post['headline']
     return pinned_post
 
 
@@ -183,19 +172,13 @@ def add_last_timestamp(posts):
     """
     add last updated liveblog timestamp
     """
-    # Currently we are leaning towards grabbing
-    # the last published post timestamp
-    timestamp = None
-    if posts:
-        timestamp = posts[0]['timestamp']
-    return timestamp
+    return posts[0]['timestamp'] if posts else None
 
 
 def process_inline_internal_link(m):
     raw_shortcode = m.group(1)
-    fake_p = BeautifulSoup('<p>%s</p>' % (raw_shortcode), "html.parser")
-    parsed_inline_shortcode = process_shortcode(fake_p)
-    return parsed_inline_shortcode
+    fake_p = BeautifulSoup(f'<p>{raw_shortcode}</p>', "html.parser")
+    return process_shortcode(fake_p)
 
 
 def process_headline(contents):
@@ -205,9 +188,9 @@ def process_headline(contents):
         if tag.name == "h1":
             headline = tag.get_text()
         else:
-            logger.warning('unexpected tag found: Ignore %s' % tag.get_text())
+            logger.warning(f'unexpected tag found: Ignore {tag.get_text()}')
     if not headline:
-        logger.error('Did not find headline on post. Contents: %s' % contents)
+        logger.error(f'Did not find headline on post. Contents: {contents}')
     return headline
 
 
@@ -227,20 +210,18 @@ def add_author_metadata(metadata, authors):
     bits = raw_authors.split(',')
     for bit in bits:
         author = { 'page': '' }
-        m = author_initials_regex.match(bit)
-        if m:
+        if m := author_initials_regex.match(bit):
             key = m.group(2)
             try:
                 author['name'] = authors[key]['name']
                 author['page'] = authors[key]['page']
             except KeyError:
-                logger.warning('did not find author in dictionary %s' % key)
+                logger.warning(f'did not find author in dictionary {key}')
                 author['name'] = m.group(1).strip()
-            authors_result.append(author)
         else:
-            logger.debug("Author not in dictionary: %s" % raw_authors)
+            logger.debug(f"Author not in dictionary: {raw_authors}")
             author['name'] = bit
-            authors_result.append(author)
+        authors_result.append(author)
     if not len(authors):
         # Add a default author to avoid erroing out
         author['name'] = 'NPR Staff'
@@ -254,16 +235,15 @@ def process_metadata(contents):
     metadata = {}
     for tag in contents:
         text = tag.get_text()
-        m = extract_metadata_regex.match(text)
-        if m:
+        if m := extract_metadata_regex.match(text):
             key = m.group(1).strip().lower()
             value = m.group(2).strip()
             if key != 'authors':
                 value = value.lower()
             metadata[key] = value
         else:
-            logger.error('Could not parse metadata. Text: %s' % text)
-    logger.debug("metadata: %s" % metadata)
+            logger.error(f'Could not parse metadata. Text: {text}')
+    logger.debug(f"metadata: {metadata}")
     return metadata
 
 
@@ -277,17 +257,15 @@ def process_post_contents(contents):
     parsed = []
     for tag in contents:
         text = tag.get_text()
-        m = shortcode_regex.match(text)
-        if m:
+        if m := shortcode_regex.match(text):
             parsed.append(process_shortcode(tag))
         else:
             # Parsed searching and replacing for inline internal links
             parsed_tag = internal_link_regex.sub(process_inline_internal_link,
                                                  unicode(tag))
-            logger.debug('parsed tag: %s' % parsed_tag)
+            logger.debug(f'parsed tag: {parsed_tag}')
             parsed.append(parsed_tag)
-    post_contents = ''.join(parsed)
-    return post_contents
+    return ''.join(parsed)
 
 
 def parse_raw_posts(raw_posts, authors):
@@ -306,7 +284,6 @@ def parse_raw_posts(raw_posts, authors):
     database = client['liveblog']
     collection = database.timestamps
     for raw_post in raw_posts:
-        post = {}
         marker_counter = 0
         post_raw_headline = []
         post_raw_metadata = []
@@ -316,14 +293,13 @@ def parse_raw_posts(raw_posts, authors):
             m = frontmatter_marker_regex.match(text)
             if m:
                 marker_counter += 1
+            elif marker_counter == 0:
+                post_raw_headline.append(tag)
+            elif marker_counter == 1:
+                post_raw_metadata.append(tag)
             else:
-                if (marker_counter == 0):
-                    post_raw_headline.append(tag)
-                elif (marker_counter == 1):
-                    post_raw_metadata.append(tag)
-                else:
-                    post_raw_contents.append(tag)
-        post[u'headline'] = process_headline(post_raw_headline)
+                post_raw_contents.append(tag)
+        post = {'headline': process_headline(post_raw_headline)}
         metadata = process_metadata(post_raw_metadata)
         add_author_metadata(metadata, authors)
         for k, v in metadata.iteritems():
@@ -334,24 +310,22 @@ def parse_raw_posts(raw_posts, authors):
         # Retrieve timestamp from mongo
         utcnow = datetime.datetime.utcnow()
         # Ignore pinned post timestamp generation
-        if 'pinned' in post.keys():
+        if 'pinned' in post:
             continue
         if post['published'] == 'yes':
-            result = collection.find_one({'_id': post['slug']})
-            if not result:
+            if result := collection.find_one({'_id': post['slug']}):
+                logger.debug(f"post {post['slug']} timestamp: retrieved from cache")
+                post['timestamp'] = result['timestamp'].replace(
+                    tzinfo=pytz.utc)
+                logger.debug(f"timestamp from DB: {post['timestamp']}")
+            else:
                 # This fires when we have a newly published post
-                logger.debug('did not find post timestamp %s: ' % post['slug'])
+                logger.debug(f"did not find post timestamp {post['slug']}: ")
                 collection.insert({
                     '_id': post['slug'],
                     'timestamp': utcnow,
                 })
                 post['timestamp'] = utcnow.replace(tzinfo=pytz.utc)
-            else:
-                logger.debug('post %s timestamp: retrieved from cache' % (
-                             post['slug']))
-                post['timestamp'] = result['timestamp'].replace(
-                    tzinfo=pytz.utc)
-                logger.debug("timestamp from DB: %s" % post['timestamp'])
         else:
             post['timestamp'] = utcnow.replace(tzinfo=pytz.utc)
 
@@ -368,9 +342,7 @@ def split_posts(doc):
     raw_post_contents = []
     ignore_orphan_text = True
 
-    hr = doc.soup.hr
-    # Get rid of everything after the Horizontal Rule
-    if (hr):
+    if hr := doc.soup.hr:
         if hr.find("p", text=end_liveblog_regex):
             status = 'after'
             # Get rid of everything after the Horizontal Rule
@@ -382,15 +354,14 @@ def split_posts(doc):
             # Detected first post stop ignoring orphan text
             if ignore_orphan_text:
                 ignore_orphan_text = False
+        elif ignore_orphan_text:
+            continue
+        elif is_post_end_marker(child):
+            ignore_orphan_text = True
+            raw_posts.append(raw_post_contents)
+            raw_post_contents = []
         else:
-            if ignore_orphan_text:
-                continue
-            elif is_post_end_marker(child):
-                ignore_orphan_text = True
-                raw_posts.append(raw_post_contents)
-                raw_post_contents = []
-            else:
-                raw_post_contents.append(child)
+            raw_post_contents.append(child)
     return status, raw_posts
 
 

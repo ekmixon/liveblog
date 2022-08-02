@@ -9,6 +9,7 @@ They will be exposed to users. Use environment variables instead.
 See get_secrets() below for a fast way to access them.
 """
 
+
 import logging
 import os
 
@@ -29,8 +30,7 @@ PROJECT_FILENAME = 'liveblog'
 # The name of the repository containing the source
 REPOSITORY_NAME = 'liveblog'
 GITHUB_USERNAME = 'nprapps'
-REPOSITORY_URL = 'git@github.com:%s/%s.git' % (
-    GITHUB_USERNAME, REPOSITORY_NAME)
+REPOSITORY_URL = f'git@github.com:{GITHUB_USERNAME}/{REPOSITORY_NAME}.git'
 REPOSITORY_ALT_URL = None  # 'git@bitbucket.org:nprapps/%s.git' % REPOSITORY_NAME'
 
 # Project name used for assets rig
@@ -108,9 +108,9 @@ except ImportError:
 
 SERVER_USER = 'ubuntu'
 SERVER_PYTHON = 'python2.7'
-SERVER_PROJECT_PATH = '/home/%s/apps/%s' % (SERVER_USER, PROJECT_FILENAME)
-SERVER_REPOSITORY_PATH = '%s/repository' % SERVER_PROJECT_PATH
-SERVER_VIRTUALENV_PATH = '%s/virtualenv' % SERVER_PROJECT_PATH
+SERVER_PROJECT_PATH = f'/home/{SERVER_USER}/apps/{PROJECT_FILENAME}'
+SERVER_REPOSITORY_PATH = f'{SERVER_PROJECT_PATH}/repository'
+SERVER_VIRTUALENV_PATH = f'{SERVER_PROJECT_PATH}/virtualenv'
 
 # Should the crontab file be installed on the servers?
 # If True, DEPLOY_TO_SERVERS must also be True
@@ -120,7 +120,7 @@ DEPLOY_CRONTAB = False
 # If True, DEPLOY_TO_SERVERS must also be True
 DEPLOY_SERVICES = False
 
-UWSGI_SOCKET_PATH = '/tmp/%s.uwsgi.sock' % PROJECT_FILENAME
+UWSGI_SOCKET_PATH = f'/tmp/{PROJECT_FILENAME}.uwsgi.sock'
 
 # Services are the server-side services we want to enable and configure.
 # A three-tuple following this format:
@@ -176,9 +176,8 @@ SCRIPT_PROJECT_NAME = 'liveblog' # Google app scripts project name
 """
 SHARING
 """
-SHARE_URL = 'http://%s/%s%s/' % (PRODUCTION_S3_BUCKET,
-                                 LIVEBLOG_DIRECTORY_PREFIX,
-                                 CURRENT_LIVEBLOG)
+SHARE_URL = f'http://{PRODUCTION_S3_BUCKET}/{LIVEBLOG_DIRECTORY_PREFIX}{CURRENT_LIVEBLOG}/'
+
 
 
 """
@@ -273,30 +272,29 @@ def configure_targets(deployment_target):
 
     if deployment_target == 'production':
         S3_BUCKET = PRODUCTION_S3_BUCKET
-        S3_BASE_URL = 'https://%s/%s%s' % (S3_BUCKET,
-                                           LIVEBLOG_DIRECTORY_PREFIX,
-                                           CURRENT_LIVEBLOG)
-        S3_DEPLOY_URL = 's3://%s/%s%s' % (S3_BUCKET,
-                                          LIVEBLOG_DIRECTORY_PREFIX,
-                                          CURRENT_LIVEBLOG)
+        S3_BASE_URL = f'https://{S3_BUCKET}/{LIVEBLOG_DIRECTORY_PREFIX}{CURRENT_LIVEBLOG}'
+
+        S3_DEPLOY_URL = (
+            f's3://{S3_BUCKET}/{LIVEBLOG_DIRECTORY_PREFIX}{CURRENT_LIVEBLOG}'
+        )
+
         SERVERS = PRODUCTION_SERVERS
-        SERVER_BASE_URL = 'https://%s/%s' % (SERVERS[0], PROJECT_SLUG)
-        SERVER_LOG_PATH = '/var/log/%s' % PROJECT_FILENAME
+        SERVER_BASE_URL = f'https://{SERVERS[0]}/{PROJECT_SLUG}'
+        SERVER_LOG_PATH = f'/var/log/{PROJECT_FILENAME}'
         LOG_LEVEL = logging.INFO
         DEBUG = False
         ASSETS_MAX_AGE = 86400
     elif deployment_target == 'staging':
         S3_BUCKET = STAGING_S3_BUCKET
-        S3_BASE_URL = 'https://s3.amazonaws.com/%s/%s%s' % (
-            S3_BUCKET,
-            LIVEBLOG_DIRECTORY_PREFIX,
-            CURRENT_LIVEBLOG)
-        S3_DEPLOY_URL = 's3://%s/%s%s' % (S3_BUCKET,
-                                          LIVEBLOG_DIRECTORY_PREFIX,
-                                          CURRENT_LIVEBLOG)
+        S3_BASE_URL = f'https://s3.amazonaws.com/{S3_BUCKET}/{LIVEBLOG_DIRECTORY_PREFIX}{CURRENT_LIVEBLOG}'
+
+        S3_DEPLOY_URL = (
+            f's3://{S3_BUCKET}/{LIVEBLOG_DIRECTORY_PREFIX}{CURRENT_LIVEBLOG}'
+        )
+
         SERVERS = STAGING_SERVERS
-        SERVER_BASE_URL = 'https://%s/%s' % (SERVERS[0], PROJECT_SLUG)
-        SERVER_LOG_PATH = '/var/log/%s' % PROJECT_FILENAME
+        SERVER_BASE_URL = f'https://{SERVERS[0]}/{PROJECT_SLUG}'
+        SERVER_LOG_PATH = f'/var/log/{PROJECT_FILENAME}'
         LOG_LEVEL = logging.INFO
         DEBUG = True
         ASSETS_MAX_AGE = 20
@@ -305,7 +303,7 @@ def configure_targets(deployment_target):
         S3_BASE_URL = 'http://127.0.0.1:7777'
         S3_DEPLOY_URL = None
         SERVERS = []
-        SERVER_BASE_URL = 'http://127.0.0.1:8001/%s' % PROJECT_SLUG
+        SERVER_BASE_URL = f'http://127.0.0.1:8001/{PROJECT_SLUG}'
         SERVER_LOG_PATH = '/tmp'
         LOG_LEVEL = logging.INFO
         DEBUG = True

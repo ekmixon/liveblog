@@ -35,8 +35,7 @@ def go(github_username=app_config.GITHUB_USERNAME, repository_name=None):
     check_credentials()
     config_files = ' '.join(['PROJECT_README.md', 'app_config.py', 'crontab'])
 
-    config = {}
-    config['$NEW_PROJECT_SLUG'] = os.getcwd().split('/')[-1]
+    config = {'$NEW_PROJECT_SLUG': os.getcwd().split('/')[-1]}
     config['$NEW_REPOSITORY_NAME'] = repository_name or config['$NEW_PROJECT_SLUG']
     config['$NEW_PROJECT_FILENAME'] = config['$NEW_PROJECT_SLUG'].replace('-', '_')
     config['$NEW_DISQUS_UUID'] = str(uuid.uuid1())
@@ -44,7 +43,7 @@ def go(github_username=app_config.GITHUB_USERNAME, repository_name=None):
     utils.confirm("Have you created a Github repository named \"%s\"?" % config['$NEW_REPOSITORY_NAME'])
 
     # Create the spreadsheet
-    title = '%s COPY' % config['$NEW_PROJECT_SLUG']
+    title = f"{config['$NEW_PROJECT_SLUG']} COPY"
     new_spreadsheet_key = create_spreadsheet(title)
     if new_spreadsheet_key:
         config[app_config.COPY_GOOGLE_DOC_KEY] = new_spreadsheet_key
@@ -62,7 +61,10 @@ def go(github_username=app_config.GITHUB_USERNAME, repository_name=None):
     local('git add .')
     local('git add -f www/assets/assetsignore')
     local('git commit -am "Initial import from app-template."')
-    local('git remote add origin git@github.com:%s/%s.git' % (github_username, config['$NEW_REPOSITORY_NAME']))
+    local(
+        f"git remote add origin git@github.com:{github_username}/{config['$NEW_REPOSITORY_NAME']}.git"
+    )
+
     local('git push -u origin master')
 
     # Update app data
@@ -115,8 +117,11 @@ def create_spreadsheet(title):
     resp = app_config.authomatic.access(**kwargs)
     if resp.status == 200:
         spreadsheet_key = resp.data['id']
-        logger.info('New spreadsheet created with key %s' % spreadsheet_key)
+        logger.info(f'New spreadsheet created with key {spreadsheet_key}')
         return spreadsheet_key
     else:
-        logger.info('Error creating spreadsheet (status code %s) with message %s' % (resp.status, resp.reason))
+        logger.info(
+            f'Error creating spreadsheet (status code {resp.status}) with message {resp.reason}'
+        )
+
         return None

@@ -42,7 +42,10 @@ def _sharecard(slug):
         if slug == post['slug']:
             post_context = post
             post_context['PARENT_LIVEBLOG_URL'] = context['PARENT_LIVEBLOG_URL']
-            post_context['SHARECARD_URL'] = '%s/sharecard/%s.html' % (context['S3_BASE_URL'], post['slug'])
+            post_context[
+                'SHARECARD_URL'
+            ] = f"{context['S3_BASE_URL']}/sharecard/{post['slug']}.html"
+
 
             preview_image = None
             # Embedded images should be preferred, and are contained within
@@ -180,17 +183,11 @@ def get_liveblog_context():
 
 def parse_document(html):
     doc = CopyDoc(html)
-    parsed_document = parse_doc.parse(doc)
-
-    return parsed_document
+    return parse_doc.parse(doc)
 
 
 # Enable Werkzeug debug pages
-if app_config.DEBUG:
-    wsgi_app = DebuggedApplication(app, evalex=False)
-else:
-    wsgi_app = app
-
+wsgi_app = DebuggedApplication(app, evalex=False) if app_config.DEBUG else app
 # Catch attempts to run the app directly
 if __name__ == '__main__':
     logging.error(

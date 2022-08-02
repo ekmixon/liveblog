@@ -36,7 +36,6 @@ def update():
 
 @task
 def get_liveblog():
-    gdoc = app_config.LIVEBLOG_GDOC_KEY
-    path = app_config.LIVEBLOG_HTML_PATH
-    if gdoc:
+    if gdoc := app_config.LIVEBLOG_GDOC_KEY:
+        path = app_config.LIVEBLOG_HTML_PATH
         get_doc(gdoc, path)

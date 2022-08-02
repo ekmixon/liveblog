@@ -48,16 +48,16 @@ def get_repo_path():
         gitconfig = f.read()
 
     match = re.search('(git@github.com:|https://github.com/)(.+)/(.+).git', gitconfig)
-    repo_username = match.group(2)
-    repo_name = match.group(3)
+    repo_username = match[2]
+    repo_name = match[3]
 
-    return '%s/%s' % (repo_username, repo_name)
+    return f'{repo_username}/{repo_name}'
 
 def delete_existing_labels(auth):
     """
     Delete labels currently on the repository
     """
-    url = 'https://api.github.com/repos/%s/labels' % get_repo_path()
+    url = f'https://api.github.com/repos/{get_repo_path()}/labels'
 
     response = requests.get(url, auth=auth)
     labels = json.loads(response.content)
@@ -65,15 +65,15 @@ def delete_existing_labels(auth):
     logger.info('Deleting %i labels' % len(labels))
 
     for label in labels:
-        logger.info('Deleting label %s' % label['name'])
+        logger.info(f"Deleting label {label['name']}")
 
-        requests.delete(url + '/' + label['name'], auth=auth)
+        requests.delete(f'{url}/' + label['name'], auth=auth)
 
 def create_labels(auth, filename='etc/default_labels.csv'):
     """
     Creates labels in Github issues.
     """
-    url = 'https://api.github.com/repos/%s/labels' % get_repo_path()
+    url = f'https://api.github.com/repos/{get_repo_path()}/labels'
 
     with open(filename) as f:
         labels = list(csv.DictReader(f))
@@ -90,7 +90,7 @@ def create_tickets(auth, filename='etc/default_tickets.csv'):
     """
     Creates tickets in Github issues.
     """
-    url = 'https://api.github.com/repos/%s/issues' % get_repo_path()
+    url = f'https://api.github.com/repos/{get_repo_path()}/issues'
 
     with open(filename) as f:
         tickets = list(csv.DictReader(f))
@@ -100,11 +100,7 @@ def create_tickets(auth, filename='etc/default_tickets.csv'):
     for ticket in tickets:
         logger.info('Creating ticket "%s"' % ticket['title'])
 
-        if ticket['labels']:
-            ticket['labels'] = ticket['labels'].split(',')
-        else:
-            ticket['labels'] = []
-
+        ticket['labels'] = ticket['labels'].split(',') if ticket['labels'] else []
         ticket['labels'].append('Default Ticket')
 
         data = json.dumps(ticket)
@@ -118,7 +114,7 @@ def create_milestones(auth, filename='etc/default_milestones.csv'):
     """
     Creates milestones in Github issues.
     """
-    url = 'https://api.github.com/repos/%s/milestones' % get_repo_path()
+    url = f'https://api.github.com/repos/{get_repo_path()}/milestones'
 
     with open(filename) as f:
         milestones = list(csv.DictReader(f))
@@ -136,7 +132,7 @@ def create_hipchat_hook(auth):
     """
     Sets up hipchat to notify our room when changes are made.
     """
-    url = 'https://api.github.com/repos/%s/hooks' % get_repo_path()
+    url = f'https://api.github.com/repos/{get_repo_path()}/hooks'
 
     logger.info('Creating Hipchat hook')
 

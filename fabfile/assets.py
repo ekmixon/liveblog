@@ -24,7 +24,7 @@ def sync():
     """
     ignore_globs = []
 
-    with open('%s/assetsignore' % ASSETS_ROOT, 'r') as f:
+    with open(f'{ASSETS_ROOT}/assetsignore', 'r') as f:
         ignore_globs = [l.strip() for l in f]
 
     local_paths = []
@@ -35,15 +35,9 @@ def sync():
             full_path = os.path.join(local_path, name)
             glob_path = full_path.split(ASSETS_ROOT)[1].strip('/')
 
-            ignore = False
-
-            for ignore_glob in ignore_globs:
-                if fnmatch(glob_path, ignore_glob):
-                    ignore = True
-                    break
-
+            ignore = any(fnmatch(glob_path, ignore_glob) for ignore_glob in ignore_globs)
             if ignore:
-                logger.info('Ignoring: %s' % full_path)
+                logger.info(f'Ignoring: {full_path}')
                 continue
 
             if name.lower() != name:
@@ -56,7 +50,7 @@ def sync():
         logger.error('The following filenames are not lowercase, please change them before running `assets.sync`:')
 
         for name in not_lowercase:
-            logger.error('    %s' % name)
+            logger.error(f'    {name}')
 
         return
 
@@ -73,7 +67,7 @@ def sync():
         local_path = key.name.replace(app_config.ASSETS_SLUG, ASSETS_ROOT, 1)
 
         # Skip root key
-        if local_path == '%s/' % ASSETS_ROOT:
+        if local_path == f'{ASSETS_ROOT}/':
             continue
 
         logger.info(local_path)
@@ -101,10 +95,10 @@ def sync():
 
                     return
 
-                if which == 'remote':
-                    download = True
-                elif which == 'local':
+                if which == 'local':
                     upload = True
+                elif which == 'remote':
+                    download = True
         else:
             download = True
 

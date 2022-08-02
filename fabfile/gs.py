@@ -42,7 +42,7 @@ def get_doc_permissions(id=None):
     if not id:
         id = app_config.LIVEBLOG_GDOC_KEY
 
-    url = "%s/%s/permissions" % (DRIVE_API_URL, id)
+    url = f"{DRIVE_API_URL}/{id}/permissions"
     kwargs = {
         'credentials': check_credentials(),
         'url': url,
@@ -55,7 +55,7 @@ def get_doc_permissions(id=None):
         with open('data/dict_permissions.txt', 'w') as f:
             for permission in resp.data['items']:
                 try:
-                    logger.info('Permission: %s' % permission)
+                    logger.info(f'Permission: {permission}')
                     extraRoles = permission['additionalRoles']
                     f.write("%s,%s\n" % (
                         permission['emailAddress'], ",".join(extraRoles)))
@@ -67,7 +67,7 @@ def get_doc_permissions(id=None):
                         pass
 
     else:
-        logger.error('Error (%s).' % resp.status)
+        logger.error(f'Error ({resp.status}).')
 
 
 def get_gas_project_id(name):
@@ -90,9 +90,9 @@ def get_gas_project_id(name):
         if resp.status == 200:
             return extract_id(resp)
         else:
-            logger.error('Error (%s).' % resp.status)
+            logger.error(f'Error ({resp.status}).')
     else:
-        logger.error('Error (%s).' % resp.status)
+        logger.error(f'Error ({resp.status}).')
     return None
 
 
@@ -112,7 +112,7 @@ def get_folder_id(name):
         'spaces': 'drive'
     }
     params = urlencode(fields)
-    url = "%s?%s" % (DRIVE_API_URL, params)
+    url = f"{DRIVE_API_URL}?{params}"
     kwargs = {
         'credentials': check_credentials(),
         'url': url,
@@ -128,9 +128,9 @@ def get_folder_id(name):
         if resp.status == 200:
             return extract_id(resp)
         else:
-            logger.error('Error (%s).' % resp.status)
+            logger.error(f'Error ({resp.status}).')
     else:
-        logger.error('Error (%s).' % resp.status)
+        logger.error(f'Error ({resp.status}).')
     return None
 
 
@@ -176,9 +176,9 @@ def list_projects(owner=None):
         if resp.status == 200:
             display_list_projects_results(resp)
         else:
-            logger.error('Error (%s).' % resp.status)
+            logger.error(f'Error ({resp.status}).')
     else:
-        logger.error('Error (%s).' % resp.status)
+        logger.error(f'Error ({resp.status}).')
 
 
 def display_list_projects_results(resp):
@@ -187,10 +187,10 @@ def display_list_projects_results(resp):
     """
     for f in resp.data['items']:
         for f in resp.data['items']:
-            logger.info('Found resource %s id: %s' % (f['title'],
-                                                      f['id']))
-            logger.info('Download url: %s' % (
-                f['exportLinks']['application/vnd.google-apps.script+json']))
+            logger.info(f"Found resource {f['title']} id: {f['id']}")
+            logger.info(
+                f"Download url: {f['exportLinks']['application/vnd.google-apps.script+json']}"
+            )
 
 
 @task
@@ -201,13 +201,13 @@ def get_project_metadata(name=None, verbose=False):
     # Parse boolean fabric args
     verbose = prep_bool_arg(verbose)
 
-    name = name if name else app_config.PROJECT_SLUG
+    name = name or app_config.PROJECT_SLUG
 
     id = get_gas_project_id(name)
 
     if not id:
         exit()
-    url = '%s/%s' % (DRIVE_API_URL, id)
+    url = f'{DRIVE_API_URL}/{id}'
 
     kwargs = {
         'credentials': check_credentials(),
@@ -224,19 +224,21 @@ def get_project_metadata(name=None, verbose=False):
         if resp.status == 200:
             display_project_metadata_results(resp, verbose)
         else:
-            logger.error('Error (%s).' % resp.status)
+            logger.error(f'Error ({resp.status}).')
     else:
-        logger.error('Error (%s).' % resp.status)
+        logger.error(f'Error ({resp.status}).')
 
 
 def display_project_metadata_results(resp, verbose):
     """
     display the results of the project metadata API
     """
-    logger.info('Download url: %s' % (
-        resp.data['exportLinks']['application/vnd.google-apps.script+json']))
-    if (verbose):
-        logger.info('File Resource: %s' % (resp.content))
+    logger.info(
+        f"Download url: {resp.data['exportLinks']['application/vnd.google-apps.script+json']}"
+    )
+
+    if verbose:
+        logger.info(f'File Resource: {resp.content}')
 
 
 @task
@@ -246,13 +248,13 @@ def get_project_files(name=None):
     """
     credentials = check_credentials()
 
-    name = name if name else app_config.PROJECT_SLUG
+    name = name or app_config.PROJECT_SLUG
 
     id = get_gas_project_id(name)
 
     if not id:
         exit()
-    url = '%s/%s' % (DRIVE_API_URL, id)
+    url = f'{DRIVE_API_URL}/{id}'
 
     kwargs = {
         'credentials': credentials,
@@ -268,14 +270,14 @@ def get_project_files(name=None):
         if resp.status == 200:
             url = resp.data['exportLinks'][MIMETYPE]
         else:
-            logger.error('Error (%s).' % resp.status)
+            logger.error(f'Error ({resp.status}).')
             exit()
     else:
-        logger.error('Error (%s).' % resp.status)
+        logger.error(f'Error ({resp.status}).')
         exit()
 
     if not url:
-        logger.error('Did not find download url for %s' % (id))
+        logger.error(f'Did not find download url for {id}')
         exit()
 
     kwargs = {
@@ -288,7 +290,7 @@ def get_project_files(name=None):
     if resp.status == 200:
         return get_project_files_results(resp)
     else:
-        logger.error('Error (%s).' % resp.status)
+        logger.error(f'Error ({resp.status}).')
 
 
 def get_project_files_results(resp):
@@ -303,7 +305,7 @@ def get_project_files_results(resp):
             ext = 'html'
         else:
             continue
-        key = '%s.%s' % (obj['name'], ext)
+        key = f"{obj['name']}.{ext}"
         files_found[key] = obj
     return files_found
 
@@ -314,10 +316,10 @@ def download(name=None, dest='google_apps_scripts'):
     pass the id of the project and a destination path
     """
 
-    name = name if name else app_config.PROJECT_SLUG
+    name = name or app_config.PROJECT_SLUG
     existing_files = get_project_files(name)
     for k, v in existing_files.iteritems():
-        with open('%s/%s' % (dest, k), "w") as f:
+        with open(f'{dest}/{k}', "w") as f:
             f.write(v['source'])
 
 
@@ -330,8 +332,7 @@ def upsert(script_name=None, src='google_apps_scripts'):
     require('settings', provided_by=['production', 'staging', 'development'])
 
     if not script_name:
-        script_name = '%s-%s' % (app_config.DEPLOYMENT_TARGET,
-                                 app_config.PROJECT_SLUG)
+        script_name = f'{app_config.DEPLOYMENT_TARGET}-{app_config.PROJECT_SLUG}'
         if app_config.DEPLOYMENT_TARGET == "production":
             script_name = app_config.PROJECT_SLUG
 
@@ -342,8 +343,10 @@ def upsert(script_name=None, src='google_apps_scripts'):
 
     existing_files = get_project_files(script_name)
 
-    files_to_upload = [f for f in glob.glob('%s/*' % src)
-                       if f.split('.')[-1] in EXTS.keys()]
+    files_to_upload = [
+        f for f in glob.glob(f'{src}/*') if f.split('.')[-1] in EXTS.keys()
+    ]
+
 
     payload = {
         "files": []
@@ -361,36 +364,35 @@ def upsert(script_name=None, src='google_apps_scripts'):
             file_to_upload = {
                 'id': existing_files[key]['id']
             }
-            logger.info(' - Replace %s (id=%s) with %s.' % (
-                key,
-                existing_files[key]['id'],
-                key))
+            logger.info(f" - Replace {key} (id={existing_files[key]['id']}) with {key}.")
         except KeyError:
-            logger.info(' - New file %s found.' % key)
-            logger.info("No existing file found for %s." % key)
+            logger.info(f' - New file {key} found.')
+            logger.info(f"No existing file found for {key}.")
             file_to_upload = {}
 
         with open(file_path) as fp:
             file_contents = fp.read()
 
-        file_to_upload.update({
+        file_to_upload |= {
             'name': file_name,
             'type': file_type,
-            'source': file_contents
-        })
+            'source': file_contents,
+        }
+
 
         payload['files'].append(file_to_upload)
 
-    logger.info('Uploading %s files... ' % len(payload['files']))
+    logger.info(f"Uploading {len(payload['files'])} files... ")
 
     # Prepare API request
     kwargs = {
         'credentials': check_credentials(),
-        'url': '%s/%s' % (UPLOAD_URL_TPL, id),
+        'url': f'{UPLOAD_URL_TPL}/{id}',
         'method': 'PUT',
         'headers': {'Content-Type': 'application/vnd.google-apps.script+json'},
         'body': json.dumps(payload),
     }
+
 
     resp = send_api_request(kwargs)
 
@@ -402,7 +404,7 @@ def upsert(script_name=None, src='google_apps_scripts'):
             if resp.status == 200:
                 logger.info('Done.')
                 exit()
-        logger.error('Error (%s).' % resp.status)
+        logger.error(f'Error ({resp.status}).')
 
 
 @task
@@ -413,22 +415,21 @@ def create(name=None, folderid=None, folder=None, src='google_apps_scripts'):
 
     # Get existing project files in drive
     dest_folder_id = None
-    name = name if name else app_config.PROJECT_SLUG
+    name = name or app_config.PROJECT_SLUG
 
-    files_to_upload = [f for f in glob.glob('%s/*' % src)
-                       if f.split('.')[-1] in EXTS.keys()]
+    files_to_upload = [
+        f for f in glob.glob(f'{src}/*') if f.split('.')[-1] in EXTS.keys()
+    ]
 
-    if not folderid:
 
-        if folder:
-            dest_folder_id = get_folder_id(folder)
-            if not dest_folder_id:
-                logger.error('Did not find the given folder, you need to create it first')
-                exit()
-            print dest_folder_id
-    else:
+    if folderid:
         dest_folder_id = folderid
 
+    elif folder:
+        dest_folder_id = get_folder_id(folder)
+        if not dest_folder_id:
+            logger.error('Did not find the given folder, you need to create it first')
+            exit()
     payload = {
         "files": []
     }
@@ -441,29 +442,28 @@ def create(name=None, folderid=None, folder=None, src='google_apps_scripts'):
         except KeyError:
             continue
 
-        file_to_upload = {}
-
         with open(file_path) as fp:
             file_contents = fp.read()
 
-        file_to_upload.update({
+        file_to_upload = {} | {
             'name': file_name,
             'type': file_type,
-            'source': file_contents
-        })
+            'source': file_contents,
+        }
 
         payload['files'].append(file_to_upload)
 
-    logger.info('Uploading %s files... ' % len(payload['files']))
+    logger.info(f"Uploading {len(payload['files'])} files... ")
 
     # Prepare API request
     kwargs = {
         'credentials': check_credentials(),
-        'url': '%s?convert=true' % (UPLOAD_URL_TPL),
+        'url': f'{UPLOAD_URL_TPL}?convert=true',
         'method': 'POST',
         'headers': {'Content-Type': 'application/vnd.google-apps.script+json'},
         'body': json.dumps(payload),
     }
+
 
     resp = send_api_request(kwargs)
 
@@ -481,7 +481,7 @@ def create(name=None, folderid=None, folder=None, src='google_apps_scripts'):
             if resp.status == 200:
                 logger.info('Done.')
                 exit()
-        logger.error('Error (%s).' % resp.status)
+        logger.error(f'Error ({resp.status}).')
 
 
 def update_metadata(id, name, src_folder_id, dest_folder_id):
@@ -490,11 +490,12 @@ def update_metadata(id, name, src_folder_id, dest_folder_id):
     """
 
     fields = {
-        'removeParents': '%s' % (src_folder_id),
-        'addParents': '%s' % (dest_folder_id),
+        'removeParents': f'{src_folder_id}',
+        'addParents': f'{dest_folder_id}',
     }
+
     params = urlencode(fields)
-    url = "%s/%s?%s" % (DRIVE_API_URL, id, params)
+    url = f"{DRIVE_API_URL}/{id}?{params}"
 
     # Compose payload
     payload = {
@@ -511,9 +512,7 @@ def update_metadata(id, name, src_folder_id, dest_folder_id):
 
     resp = send_api_request(kwargs)
 
-    if resp.status == 200:
-        return True
-    return False
+    return resp.status == 200
 
 
 @task
@@ -586,7 +585,7 @@ def send_api_request(kwargs, retry=False):
         path = os.path.expanduser(app_config.GOOGLE_OAUTH_CREDENTIALS_PATH)
         os.remove(path)
         kwargs['credentials'] = check_credentials()
-    logger.debug('API Request: %s ' % kwargs)
+    logger.debug(f'API Request: {kwargs} ')
     resp = app_config.authomatic.access(**kwargs)
-    logger.debug('API Response: %s ' % resp.content)
+    logger.debug(f'API Response: {resp.content} ')
     return resp

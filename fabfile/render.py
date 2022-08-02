@@ -51,10 +51,10 @@ def less():
     for path in glob('less/*.less'):
         filename = os.path.split(path)[-1]
         name = os.path.splitext(filename)[0]
-        out_path = 'www/css/%s.less.css' % name
+        out_path = f'www/css/{name}.less.css'
 
         try:
-            local('node_modules/less/bin/lessc %s %s' % (path, out_path))
+            local(f'node_modules/less/bin/lessc {path} {out_path}')
         except:
             logger.error('It looks like "lessc" isn\'t installed. Try running: "npm install"')
             raise
@@ -122,16 +122,16 @@ def render_all():
 
         # Skip utility views
         if name == 'static' or name.startswith('_'):
-            logger.info('Skipping %s' % name)
+            logger.info(f'Skipping {name}')
             continue
 
         # Convert trailing slashes to index.html files
         if rule_string.endswith('/'):
-            filename = 'www' + rule_string + 'index.html'
+            filename = f'www{rule_string}index.html'
         elif rule_string.endswith('.html'):
-            filename = 'www' + rule_string
+            filename = f'www{rule_string}'
         else:
-            logger.info('Skipping %s' % name)
+            logger.info(f'Skipping {name}')
             continue
 
         # Create the output path
@@ -140,7 +140,7 @@ def render_all():
         if not (os.path.exists(dirname)):
             os.makedirs(dirname)
 
-        logger.info('Rendering %s' % (filename))
+        logger.info(f'Rendering {filename}')
 
         # Render views, reusing compiled assets
         with _fake_context(rule_string):
@@ -188,7 +188,7 @@ def generate_views(views, parsed_liveblog):
         pass
 
     for view_name in views:
-        logger.info("Generating view for {}".format(view_name))
+        logger.info(f"Generating view for {view_name}")
         view = app.__dict__[view_name]
 
         # If a view requires an argument, then run it once for each blog post
@@ -201,17 +201,17 @@ def generate_views(views, parsed_liveblog):
                 with app.app.test_request_context():
                     path = url_for(view_name, slug=slug)
                     # If this view type requires a subdirectory, then create one
-                    dirname = ".liveblog" + os.path.dirname(path)
+                    dirname = f".liveblog{os.path.dirname(path)}"
                     try:
                         #logger.info("Creating directory: " + dirname)
                         os.makedirs(dirname)
                     except OSError:
                         pass
-                    # for existing in os.listdir(dirname):
-                    #     filename = os.path.join(dirname, existing)
-                    #     logger.info("Existing file: " + filename)
-                    #     if os.path.isfile(filename):
-                    #         os.unlink(filename)
+                                    # for existing in os.listdir(dirname):
+                                    #     filename = os.path.join(dirname, existing)
+                                    #     logger.info("Existing file: " + filename)
+                                    #     if os.path.isfile(filename):
+                                    #         os.unlink(filename)
 
                 with _fake_context(path):
                     g.parsed_liveblog = parsed_liveblog
@@ -231,8 +231,7 @@ def generate_views(views, parsed_liveblog):
 def parse_liveblog():
     with open(app_config.LIVEBLOG_HTML_PATH) as f:
         html = f.read()
-    parsed_liveblog = app.parse_document(html)
-    return parsed_liveblog
+    return app.parse_document(html)
 
 
 @task

@@ -89,7 +89,7 @@ def install_font(force=True):
         logger.info('Installing font')
 
         fontello_session_id = get_fontello_session_id()
-        zip_url = '{}/{}/get'.format(FONTELLO_HOST, fontello_session_id)
+        zip_url = f'{FONTELLO_HOST}/{fontello_session_id}/get'
         zip_stream = requests.get(zip_url).content
         zipfile = ZipFile(StringIO(zip_stream))
 
@@ -156,7 +156,7 @@ def open_font():
     # Based on https://gist.github.com/puzrin/5537065
     # Replaces `fontello-cli` Node library, which had a vulnerability
     fontello_session_id = get_fontello_session_id()
-    webbrowser.open('{}/{}'.format(FONTELLO_HOST, fontello_session_id))
+    webbrowser.open(f'{FONTELLO_HOST}/{fontello_session_id}')
 
 
 @task

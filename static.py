@@ -24,10 +24,13 @@ def _templates_js():
 # Render LESS files on-demand
 @static.route('/less/<string:filename>')
 def _less(filename):
-    if not os.path.exists('less/%s' % filename):
+    if not os.path.exists(f'less/{filename}'):
         abort(404)
 
-    r = subprocess.check_output(["node_modules/less/bin/lessc", "less/%s" % filename])
+    r = subprocess.check_output(
+        ["node_modules/less/bin/lessc", f"less/{filename}"]
+    )
+
 
     return make_response(r, 200, { 'Content-Type': 'text/css' })
 
@@ -35,14 +38,14 @@ def _less(filename):
 @static.route('/js/app_config.js')
 def _app_config_js():
     config = flatten_app_config()
-    js = 'window.APP_CONFIG = ' + json.dumps(config, cls=BetterJSONEncoder)
+    js = f'window.APP_CONFIG = {json.dumps(config, cls=BetterJSONEncoder)}'
 
     return make_response(js, 200, { 'Content-Type': 'application/javascript' })
 
 # Render copytext
 @static.route('/js/copy.js')
 def _copy_js():
-    copy = 'window.COPY = ' + copytext.Copy(app_config.COPY_PATH).json()
+    copy = f'window.COPY = {copytext.Copy(app_config.COPY_PATH).json()}'
 
     return make_response(copy, 200, { 'Content-Type': 'application/javascript' })
 
@@ -50,7 +53,7 @@ def _copy_js():
 @static.route('/<path:path>')
 def _static(path):
     try:
-        with open('www/%s' % path) as f:
+        with open(f'www/{path}') as f:
             return make_response(f.read(), 200, { 'Content-Type': guess_type(path)[0] })
     except IOError:
         abort(404)

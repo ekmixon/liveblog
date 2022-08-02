@@ -44,29 +44,28 @@ class GoogleDoc(object):
         Because sometimes, just sometimes, you need to update the class when you instantiate it.
         In this case, we need, minimally, a document key.
         """
-        if kwargs:
-            if kwargs.items():
-                for key, value in kwargs.items():
-                    setattr(self, key, value)
+        if kwargs and kwargs.items():
+            for key, value in kwargs.items():
+                setattr(self, key, value)
 
     def get_auth(self):
         """
         Gets an authorization token and adds it to the class.
         """
-        data = {}
         if not self.email or not self.password:
             raise KeyError("Error! You're missing some variables. You need to export APPS_GOOGLE_EMAIL and APPS_GOOGLE_PASS.")
 
-        else:
-            data['Email'] = self.email
-            data['Passwd'] = self.password
-            data['scope'] = self.scope
-            data['service'] = self.service
-            data['session'] = self.session
+        data = {
+            'Email': self.email,
+            'Passwd': self.password,
+            'scope': self.scope,
+            'service': self.service,
+            'session': self.session,
+        }
 
-            r = requests.post("https://www.google.com/accounts/ClientLogin", data=data)
+        r = requests.post("https://www.google.com/accounts/ClientLogin", data=data)
 
-            self.auth = r.content.split('\n')[2].split('Auth=')[1]
+        self.auth = r.content.split('\n')[2].split('Auth=')[1]
 
     def get_document(self):
         """
@@ -79,9 +78,7 @@ class GoogleDoc(object):
         elif not self.key:
             raise KeyError("Error! You forgot to pass a key to the class.")
         else:
-            headers = {}
-            headers['Authorization'] = "GoogleLogin auth=%s" % self.auth
-
+            headers = {'Authorization': f"GoogleLogin auth={self.auth}"}
             url_params = { 'key': self.key, 'format': self.file_format, 'gid': self.gid }
             url = self.new_spreadsheet_url % url_params
 
@@ -94,6 +91,6 @@ class GoogleDoc(object):
             if r.status_code != 200:
                 raise KeyError("Error! Your Google Doc does not exist.")
 
-            with open('data/%s.%s' % (self.file_name, self.file_format), 'wb') as writefile:
+            with open(f'data/{self.file_name}.{self.file_format}', 'wb') as writefile:
                 writefile.write(r.content)
 

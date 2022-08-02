@@ -26,8 +26,7 @@ def oauth_alert():
     if not _has_api_credentials():
         return render_template('oauth/warning.html', **context)
 
-    credentials = get_credentials()
-    if credentials:
+    if credentials := get_credentials():
         resp = authomatic.access(credentials, 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json')
         if resp.status == 200:
             context['email'] = resp.data['email']
@@ -46,9 +45,9 @@ def authenticate():
     if not _has_api_credentials():
         return render_template('oauth/warning.html', **context)
 
-    result = authomatic.login(WerkzeugAdapter(request, response), 'google')
-
-    if result:
+    if result := authomatic.login(
+        WerkzeugAdapter(request, response), 'google'
+    ):
         context['result'] = result
 
         if not result.error:
@@ -69,10 +68,10 @@ def oauth_required(f):
         credentials = get_credentials()
         if app_config.COPY_GOOGLE_DOC_KEY and (not credentials or not credentials.valid):
             return redirect(url_for('_oauth.oauth_alert'))
-        else:
-            if request.args.get('refresh'):
-                get_document(app_config.COPY_GOOGLE_DOC_KEY, app_config.COPY_PATH)
-            return f(*args, **kwargs)
+        if request.args.get('refresh'):
+            get_document(app_config.COPY_GOOGLE_DOC_KEY, app_config.COPY_PATH)
+        return f(*args, **kwargs)
+
     return decorated_function
 
 def get_credentials():
@@ -107,8 +106,8 @@ def get_document(key, file_path, mimeType=None):
     """
     Uses Authomatic to get the google doc
     """
-    mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     if not mimeType:
+        mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         mimeType = mime
     credentials = get_credentials()
     url = DRIVE_API_EXPORT_TEMPLATE % (
@@ -120,7 +119,7 @@ def get_document(key, file_path, mimeType=None):
         if response.status == 404:
             raise KeyError("Error! Your Google Doc does not exist or you do not have permission to access it.")
         else:
-            raise KeyError("Error! Google returned a %s error" % response.status)
+            raise KeyError(f"Error! Google returned a {response.status} error")
 
     with open(file_path, 'wb') as writefile:
         writefile.write(response.content)
@@ -136,9 +135,12 @@ def get_doc(key, file_path):
 
     if response.status != 200:
         if response.status == 404:
-            raise KeyError("Error! Your Google Doc (%s) does not exist or you do not have permission to access it." % key)
+            raise KeyError(
+                f"Error! Your Google Doc ({key}) does not exist or you do not have permission to access it."
+            )
+
         else:
-            raise KeyError("Error! Google returned a %s error" % response.status)
+            raise KeyError(f"Error! Google returned a {response.status} error")
 
     with codecs.open(file_path, 'w', 'utf-8') as writefile:
         writefile.write(response.content)
@@ -154,9 +156,12 @@ def get_doc_as_text(key, file_path):
 
     if response.status != 200:
         if response.status == 404:
-            raise KeyError("Error! Your Google Doc (%s) does not exist or you do not have permission to access it." % key)
+            raise KeyError(
+                f"Error! Your Google Doc ({key}) does not exist or you do not have permission to access it."
+            )
+
         else:
-            raise KeyError("Error! Google returned a %s error" % response.status)
+            raise KeyError(f"Error! Google returned a {response.status} error")
 
     with codecs.open(file_path, 'w', 'utf-8') as writefile:
         writefile.write(response.content)

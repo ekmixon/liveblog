@@ -52,20 +52,19 @@ def _process_id(url, tag):
     """
     Extract an ID from a url (or just return the URL).
     """
-    if tag == 'tweet':
-        parts = url.split('/')
-        return parts[5]
-    else:
+    if tag != 'tweet':
         return url
+    parts = url.split('/')
+    return parts[5]
 
 
 def _get_extra_context(id, tag):
     """
     Do some processing
     """
-    extra = dict()
+    extra = {}
     if tag in IMAGE_TYPES:
-        extra.update(_get_image_context(id))
+        extra |= _get_image_context(id)
     if tag == 'tweet':
         extra.update(_get_tweet_context(id))
     return extra
@@ -80,14 +79,13 @@ def _handler(context, content, pargs, kwargs, tag, defaults):
         template_context = dict(url=pargs[0],
                             id=id)
         extra_context = _get_extra_context(id, tag)
-        template_context.update(extra_context)
+        template_context |= extra_context
     else:
-        template_context = dict()
+        template_context = {}
     template_context.update(defaults)
     template_context.update(kwargs)
-    template = env.get_template('%s.html' % tag)
-    output = template.render(**template_context)
-    return output
+    template = env.get_template(f'{tag}.html')
+    return template.render(**template_context)
 
 
 """
@@ -109,7 +107,7 @@ def process_shortcode(tag):
         return parser.parse(text)
     except shortcodes.RenderingError as e:
         logger.error('Could not render short code in: "%s"' % text)
-        logger.error('cause: %s' % e.__cause__)
+        logger.error(f'cause: {e.__cause__}')
         return ''
 
 
@@ -122,10 +120,12 @@ def _get_image_context(id):
     client = MongoClient(app_config.MONGODB_URL)
     database = client['liveblog']
     collection = database.images
-    result = collection.find_one({'_id': id})
+    if result := collection.find_one({'_id': id}):
+        logger.info(f'image {id}: retrieved from cache')
+        ratio = result['ratio']
 
-    if not result:
-        logger.info('image %s: uncached, downloading %s' % (id, url))
+    else:
+        logger.info(f'image {id}: uncached, downloading {url}')
         response = requests.get(url)
         image = Image.open(StringIO(response.content))
         ratio = float(image.height) / float(image.width)
@@ -134,10 +134,6 @@ def _get_image_context(id):
             'date': datetime.datetime.utcnow(),
             'ratio': ratio,
         })
-    else:
-        logger.info('image %s: retrieved from cache' % id)
-        ratio = result['ratio']
-
     ratio = round(ratio * 100, 2)
     return dict(ratio=ratio, url=url)
 
@@ -151,10 +147,12 @@ def _get_tweet_context(id):
     client = MongoClient(app_config.MONGODB_URL)
     database = client['liveblog']
     collection = database.tweets
-    result = collection.find_one({'_id': id})
+    if result := collection.find_one({'_id': id}):
+        layout = result['layout']
+        logger.info(f'tweet {id}: retrieved from cache, is layout `{layout}`')
 
-    if not result:
-        logger.info('tweet %s: uncached, downloading' % id)
+    else:
+        logger.info(f'tweet {id}: uncached, downloading')
         response = requests.get(TWITTER_OEMBED_URL, params=(('id', id),))
         response.raise_for_status()
         data = response.json()
@@ -167,17 +165,13 @@ def _get_tweet_context(id):
             if 'pic.twitter.com' in link.text:
                 layout = 'image'
 
-        logger.info('tweet %s: is layout `%s`' % (id, layout))
+        logger.info(f'tweet {id}: is layout `{layout}`')
 
         collection.insert({
             '_id': id,
             'date': datetime.datetime.utcnow(),
             'layout': layout,
         })
-    else:
-        layout = result['layout']
-        logger.info('tweet %s: retrieved from cache, is layout `%s`' % (id, layout))
-
     return dict(layout=layout)
 
 
